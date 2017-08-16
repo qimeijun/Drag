@@ -1,8 +1,8 @@
 ;
+// 使用jQuery插件的形式写的拖拽
 (function () {
-    var transform = getTransform();
+    // 构造
     function Drag(selector) {
-        // 放在构造函数中的属性，都是属于每一个实例单独拥有的。
         this.elem = typeof selector == 'Object' ? selector : document.getElementById(selector);
         this.startX = 0;
         this.startY = 0;
@@ -11,26 +11,24 @@
 
         this.init();
     }
-
     // 原型
     Drag.prototype = {
         constructor: Drag,
         init: function () {
-            // 初始时需要做些什么事情
             this.setDrag();
         },
-        // 稍作改造，仅用于获取当前元素的属性，类似于getName
+        // 获取元素的属性
         getStyle: function (property) {
-            return document.defaultView.getComputedStyle ? document.defaultView.getComputedStyle(this.elem, false)[property] : this.elem.currentStyle[property];
+            return document.defaultView.getComputedStyle ?  document.defaultView.getComputedStyle(this.elem, false)[property] : this.elem.currentStyle[property];
         },
-
-        // 获取当前元素的位置
+        // 获取当前位置信息
         getPosition: function () {
-            var pos = {x: 0, y: 0};
+            var pos = {x: 0, y:0};
+            var transform = getTransform();
             if (transform) {
                 var transformValue = this.getStyle(transform);
                 if (transformValue === 'none') {
-                    this.elem.style[transform] = 'translate(0,0)';
+                    this.elem.style[transform] = 'translate(0, 0)';
                 } else {
                     var temp = transformValue.match(/-?\d+/g);
                     pos = {
@@ -44,24 +42,23 @@
                 } else {
                     pos = {
                         x: parseInt(this.getStyle('left') ? this.getStyle('left') : 0),
-                        y: parseInt(this.getStyle('top') ? this.getStyle('top') : 0),
+                        y: parseInt(this.getStyle('top') ? this.getStyle('top') : 0)
                     }
                 }
-
             }
             return pos;
         },
-        // 用来设置当前的位置
+        // 设置元素位置
         setPosition: function (pos) {
-            if(transform) {
+            var transform = getTransform();
+            if (transform) {
                 this.elem.style[transform] = 'translate('+ pos.x +'px, '+ pos.y +'px)';
             } else {
-                this.elem.style.left = pos.x + 'px';
-                this.elem.style.top = pos.y + 'px';
+                this.elem.style.left = pos.x;
+                this.elem.style.top = pos.y;
             }
         },
-
-        // 事件绑定
+        // 给元素绑定事件
         setDrag: function () {
             var self = this;
             this.elem.addEventListener('mousedown', start, false);
@@ -73,17 +70,18 @@
 
                 self.sourceX = pos.x;
                 self.sourceY = pos.y;
-                document.addEventListener('mousemove', move, false);
-                document.addEventListener('mouseup', end, false);
+
+                self.elem.addEventListener('mousemove', move, false);
+                self.elem.addEventListener('moveup', end, false);
             }
 
             function move(event) {
                 var currentX = event.pageX;
                 var currentY = event.pageY;
-                
-                var distanceX = currentX - self.startX
+
+                var distanceX = currentX - self.startX;
                 var distanceY = currentY - self.startY;
-                
+
                 self.setPosition({
                     x: (self.sourceX + distanceX).toFixed(),
                     y: (self.sourceY + distanceY).toFixed()
@@ -93,26 +91,33 @@
             function end(event) {
                 document.removeEventListener('mousemove', move);
                 document.removeEventListener('mouseup', end);
-            }
+            };
         }
-    }        
-
-    // 私有方法，用于获取transform的兼容写法
+    }
     function getTransform() {
         var transform = '';
         var transformArr = transformArr = ['transform', 'webkitTransform', 'MozTransform', 'msTransform', 'OTransform'];
         var divStyle = document.createElement('div').style;
-
         for (var i = 0; i < transformArr.length; i++) {
             if (transformArr[i] in divStyle) {
-                return transform = transformArr[i];
+                return transform = transform[i];
             }
         }
         return transform;
     }
 
-    // 一种对外暴露的方式
     window.Drag = Drag;
-})();
-new Drag('firstbox');
 
+    //通过扩展方法将拖拽扩展为jQuery的一个实例方法
+    (function ($) {
+        $.fn.extend({
+            becomeDrag: function () {
+                new Drag(this[0]);
+                // 为了保证jQuery所有的方法都能够链式访问，么一个方法的最后都需要返回this，即返回jQuery实例
+                return this;
+            }
+        });
+    })(jQuery);
+})();
+
+new Drag('firstbox');
